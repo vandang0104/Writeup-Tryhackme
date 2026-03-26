@@ -179,6 +179,7 @@ sudo LD_PRELOAD=/home/user/ldpreload/shell.so find
 Kết quả: Một shell với quyền root sẽ được mở ra ngay lập tức!
 
 **Leo thang Đặc quyền qua SUID và SGID**
+
 Phần lớn việc kiểm soát đặc quyền trên Linux dựa vào việc quản lý tương tác giữa người dùng và tệp tin thông qua permissions (quyền hạn). Như ông đã biết, tệp tin có các quyền: đọc (read), ghi (write) và thực thi (execute). Thông thường, các quyền này được cấp dựa trên cấp độ đặc quyền của người dùng.
 
 Tuy nhiên, mọi thứ sẽ thay đổi với SUID (Set-user Identification) và SGID (Set-group Identification).
