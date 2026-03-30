@@ -23,6 +23,48 @@ Dữ liệu của hơn 700 triệu người dùng LinkedIn đã bị rao bán tr
 
 - Liên kết hồ sơ LinkedIn và thông tin kinh nghiệm làm việc.
 
+Lỗi xác thực người dùng xảy ra như thế nào?
+Xác thực người dùng (User authentication) là khía cạnh cốt lõi trong việc phát triển bất kỳ ứng dụng nào chứa dữ liệu nhạy cảm. Lỗi xác thực người dùng (BUA) phản ánh một kịch bản mà tại đó, một điểm cuối (endpoint) của API cho phép kẻ tấn công truy cập vào cơ sở dữ liệu hoặc chiếm được quyền hạn cao hơn so với quyền hạn hiện có.
+
+Nguyên nhân chính đằng sau BUA thường là:
+
+Triển khai xác thực không đúng cách: Ví dụ như sử dụng các truy vấn kiểm tra email/mật khẩu sai lệch.
+
+Thiếu hụt các cơ chế bảo mật: Ví dụ như thiếu các tiêu đề ủy quyền (authorization headers), mã thông báo (tokens), v.v.
+
+Hãy tưởng tượng một kịch bản mà kẻ tấn công có khả năng lạm dụng một API xác thực; điều này cuối cùng sẽ dẫn đến rò rỉ dữ liệu, xóa, sửa đổi dữ liệu hoặc thậm chí là kẻ tấn công chiếm đoạt hoàn toàn tài khoản. Thông thường, các tin tặc sẽ tạo ra các đoạn mã (scripts) đặc biệt để lập hồ sơ, liệt kê người dùng trên hệ thống và xác định các điểm cuối xác thực. Một hệ thống xác thực được triển khai kém có thể khiến bất kỳ người dùng nào cũng có thể mạo danh danh tính của một người dùng khác.
+
+Tác động tiềm tàng
+Trong lỗi xác thực người dùng, kẻ tấn công có thể xâm phạm phiên làm việc đã được xác thực hoặc xâm phạm chính cơ chế xác thực để dễ dàng truy cập vào dữ liệu nhạy cảm. Những kẻ xấu có thể giả danh một người được ủy quyền và thực hiện các hoạt động không mong muốn, bao gồm cả việc chiếm đoạt toàn bộ tài khoản.
+
+Ví dụ thực tế (Practical Example)
+Tiếp tục sử dụng trình duyệt Chrome và Talend API Tester trên máy ảo (VM) để thực hành gỡ lỗi.
+
+Kịch bản: Bob hiểu rằng xác thực là cực kỳ quan trọng. Anh ấy được giao nhiệm vụ phát triển một endpoint API là apirule2/user/login_v để xác thực người dùng dựa trên email và mật khẩu được cung cấp.
+
+Cơ chế: Endpoint này sẽ trả về một mã token. Mã này sau đó sẽ được gửi kèm trong tiêu đề Authorization-Token (thông qua yêu cầu GET) tới địa chỉ apirule2/user/details để hiển thị thông tin chi tiết của một nhân viên cụ thể.
+
+Lỗ hổng: Bob đã phát triển thành công endpoint đăng nhập; tuy nhiên, anh ấy chỉ sử dụng email để xác nhận người dùng từ bảng dữ liệu (user table) và bỏ qua trường mật khẩu trong câu lệnh truy vấn SQL.
+
+Hậu quả: Kẻ tấn công chỉ cần biết địa chỉ email của nạn nhân là có thể lấy được mã token hợp lệ hoặc chiếm đoạt tài khoản.
+
+Thử nghiệm trên VM:
+Bạn có thể kiểm tra điều này bằng cách gửi một yêu cầu POST tới http://localhost:80/MHT/apirule2/user/login_v với các tham số biểu mẫu (form parameters) gồm email và mật khẩu (mật khẩu có thể nhập bất kỳ). Như bạn thấy, endpoint bị lỗi vẫn trả về một mã token, mã này có thể được dùng để truy cập /apirule2/user/details.
+
+Cách khắc phục:
+Chúng ta sẽ cập nhật logic truy vấn đăng nhập để sử dụng cả email và mật khẩu để xác thực. Endpoint  /apirule2/user/login_s là một phiên bản an toàn, yêu cầu cả mật khẩu và email chính xác mới cấp quyền cho người dùng.
+
+Các biện pháp giảm thiểu (Mitigation Measures)
+Mật khẩu phức tạp: Đảm bảo người dùng cuối sử dụng mật khẩu phức tạp với độ hỗn loạn (entropy) cao.
+
+Không lộ thông tin nhạy cảm: Tuyệt đối không để lộ thông tin đăng nhập nhạy cảm trong các yêu cầu GET hoặc POST (ví dụ: không đưa mật khẩu lên URL).
+
+Sử dụng cơ chế mạnh: Kích hoạt các mã thông báo JSON Web Tokens (JWT) mạnh mẽ, các tiêu đề ủy quyền, v.v.
+
+Đa lớp bảo vệ: Triển khai xác thực đa yếu tố (MFA) nếu có thể, thiết lập tính năng khóa tài khoản hoặc hệ thống captcha để ngăn chặn tấn công vét cạn (brute force).
+
+Mã hóa mật khẩu: Đảm bảo mật khẩu không được lưu dưới dạng văn bản thuần túy (plain text) trong cơ sở dữ liệu để tránh việc kẻ tấn công chiếm đoạt tài khoản sau khi đột nhập vào DB.
+
 - Các chi tiết tài khoản mạng xã hội khác.
 
 **2. Vụ vi phạm dữ liệu Twitter (Tháng 6/2022)**
@@ -74,3 +116,48 @@ Giải pháp khá đơn giản: Bob cần triển khai một cơ chế ủy quy�
 - Kiểm soát truy cập nghiêm ngặt: Luôn thực hiện các phương pháp kiểm tra để xác nhận xem người dùng đã đăng nhập có thực sự được phép thực hiện hành động cụ thể đó trên đối tượng đó hay không.
 
 - Sử dụng Token ngẫu nhiên: Khuyến khích sử dụng các giá trị hoàn toàn ngẫu nhiên (kết hợp cơ chế mã hóa và giải mã mạnh) để tạo ra các mã token mà kẻ tấn công gần như không thể dự đoán được.
+
+**Lỗi xác thực người dùng xảy ra như thế nào?**
+
+Xác thực người dùng (User authentication) là khía cạnh cốt lõi trong việc phát triển bất kỳ ứng dụng nào chứa dữ liệu nhạy cảm. Lỗi xác thực người dùng (BUA) phản ánh một kịch bản mà tại đó, một điểm cuối (endpoint) của API cho phép kẻ tấn công truy cập vào cơ sở dữ liệu hoặc chiếm được quyền hạn cao hơn so với quyền hạn hiện có.
+
+Nguyên nhân chính đằng sau BUA thường là:
+
+- Triển khai xác thực không đúng cách: Ví dụ như sử dụng các truy vấn kiểm tra email/mật khẩu sai lệch.
+
+- Thiếu hụt các cơ chế bảo mật: Ví dụ như thiếu các tiêu đề ủy quyền (authorization headers), mã thông báo (tokens), v.v.
+
+Hãy tưởng tượng một kịch bản mà kẻ tấn công có khả năng lạm dụng một API xác thực; điều này cuối cùng sẽ dẫn đến rò rỉ dữ liệu, xóa, sửa đổi dữ liệu hoặc thậm chí là kẻ tấn công chiếm đoạt hoàn toàn tài khoản. Thông thường, các tin tặc sẽ tạo ra các đoạn mã (scripts) đặc biệt để lập hồ sơ, liệt kê người dùng trên hệ thống và xác định các điểm cuối xác thực. Một hệ thống xác thực được triển khai kém có thể khiến bất kỳ người dùng nào cũng có thể mạo danh danh tính của một người dùng khác.
+
+**Tác động tiềm tàng**
+
+Trong lỗi xác thực người dùng, kẻ tấn công có thể xâm phạm phiên làm việc đã được xác thực hoặc xâm phạm chính cơ chế xác thực để dễ dàng truy cập vào dữ liệu nhạy cảm. Những kẻ xấu có thể giả danh một người được ủy quyền và thực hiện các hoạt động không mong muốn, bao gồm cả việc chiếm đoạt toàn bộ tài khoản.
+
+**Ví dụ thực tế (Practical Example)**
+Tiếp tục sử dụng trình duyệt Chrome và Talend API Tester trên máy ảo (VM) để thực hành gỡ lỗi.
+
+1. Kịch bản: Bob hiểu rằng xác thực là cực kỳ quan trọng. Anh ấy được giao nhiệm vụ phát triển một endpoint API là apirule2/user/login_v để xác thực người dùng dựa trên email và mật khẩu được cung cấp.
+
+2. Cơ chế: Endpoint này sẽ trả về một mã token. Mã này sau đó sẽ được gửi kèm trong tiêu đề Authorization-Token (thông qua yêu cầu GET) tới địa chỉ apirule2/user/details để hiển thị thông tin chi tiết của một nhân viên cụ thể.
+
+2. Lỗ hổng: Bob đã phát triển thành công endpoint đăng nhập; tuy nhiên, anh ấy chỉ sử dụng email để xác nhận người dùng từ bảng dữ liệu (user table) và bỏ qua trường mật khẩu trong câu lệnh truy vấn SQL.
+
+3. Hậu quả: Kẻ tấn công chỉ cần biết địa chỉ email của nạn nhân là có thể lấy được mã token hợp lệ hoặc chiếm đoạt tài khoản.
+
+**Thử nghiệm trên VM:**
+Bạn có thể kiểm tra điều này bằng cách gửi một yêu cầu POST tới http://localhost:80/MHT/apirule2/user/login_v với các tham số biểu mẫu (form parameters) gồm email và mật khẩu (mật khẩu có thể nhập bất kỳ). Như bạn thấy, endpoint bị lỗi vẫn trả về một mã token, mã này có thể được dùng để truy cập /apirule2/user/details.
+
+**Cách khắc phục:**
+Chúng ta sẽ cập nhật logic truy vấn đăng nhập để sử dụng cả email và mật khẩu để xác thực. Endpoint  /apirule2/user/login_s là một phiên bản an toàn, yêu cầu cả mật khẩu và email chính xác mới cấp quyền cho người dùng.
+
+**Các biện pháp giảm thiểu (Mitigation Measures)**
+
+- Mật khẩu phức tạp: Đảm bảo người dùng cuối sử dụng mật khẩu phức tạp với độ hỗn loạn (entropy) cao.
+
+- Không lộ thông tin nhạy cảm: Tuyệt đối không để lộ thông tin đăng nhập nhạy cảm trong các yêu cầu GET hoặc POST (ví dụ: không đưa mật khẩu lên URL).
+
+- Sử dụng cơ chế mạnh: Kích hoạt các mã thông báo JSON Web Tokens (JWT) mạnh mẽ, các tiêu đề ủy quyền, v.v.
+
+- Đa lớp bảo vệ: Triển khai xác thực đa yếu tố (MFA) nếu có thể, thiết lập tính năng khóa tài khoản hoặc hệ thống captcha để ngăn chặn tấn công vét cạn (brute force).
+
+- Mã hóa mật khẩu: Đảm bảo mật khẩu không được lưu dưới dạng văn bản thuần túy (plain text) trong cơ sở dữ liệu để tránh việc kẻ tấn công chiếm đoạt tài khoản sau khi đột nhập vào DB.
