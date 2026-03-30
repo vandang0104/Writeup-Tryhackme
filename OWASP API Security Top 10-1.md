@@ -196,3 +196,76 @@ Sau khi nhận ra sai lầm, Bob đã cập nhật và tạo ra một endpoint a
 - Tránh sử dụng các phương thức chung chung: Hạn chế dùng các hàm như to_string() hoặc to_json() trên toàn bộ đối tượng dữ liệu vì chúng sẽ xuất bản tất cả các thuộc tính của đối tượng đó.
 
 - Kiểm thử API (API Endpoint Testing): Sử dụng nhiều trường hợp kiểm thử (test cases) khác nhau và xác minh thông qua cả kiểm thử tự động lẫn thủ công để xem liệu API có đang rò rỉ thêm dữ liệu thừa hay không.
+
+
+**Lỗi này xảy ra như thế nào?**
+
+Việc thiếu hụt tài nguyên và giới hạn tần suất có nghĩa là các API không áp dụng bất kỳ hạn chế nào đối với tần suất khách hàng yêu cầu tài nguyên hoặc kích thước của các tệp tin được gửi lên. Điều này ảnh hưởng xấu đến hiệu suất của máy chủ API và dẫn đến tình trạng DoS (Denial of Service - Từ chối dịch vụ) hoặc khiến dịch vụ không thể truy cập được.
+
+Hãy cân nhắc kịch bản khi hạn mức API không được thực thi: một người dùng (thường là kẻ xâm nhập) có thể tải lên nhiều tệp tin dung lượng hàng GB cùng lúc hoặc thực hiện hàng nghìn yêu cầu mỗi giây. Những điểm cuối (endpoints) API như vậy sẽ dẫn đến việc tiêu thụ tài nguyên quá mức về mạng (network), lưu trữ (storage), tính toán (compute), v.v.
+
+Ngày nay, những kẻ tấn công sử dụng các loại hình tấn công này để đảm bảo dịch vụ của một tổ chức không thể hoạt động, từ đó làm hoen ố danh tiếng thương hiệu do thời gian ngừng hoạt động (downtime) tăng cao. Một ví dụ đơn giản là việc không tuân thủ hệ thống Captcha trên biểu mẫu đăng nhập, cho phép bất kỳ ai cũng có thể thực hiện vô số truy vấn tới cơ sở dữ liệu thông qua một đoạn mã nhỏ viết bằng Python.
+
+**Tác động tiềm tàng**
+
+Cuộc tấn công này chủ yếu nhắm vào nguyên tắc Tính khả dụng (Availability) trong bảo mật; tuy nhiên, nó có thể làm tổn hại danh tiếng của thương hiệu và gây ra tổn thất về tài chính.
+
+**Ví dụ thực tế (Practical Example)**
+
+Tiếp tục sử dụng trình duyệt Chrome và Talend API Tester trên máy ảo (VM) để thực hành.
+
+1. Kịch bản: Công ty MHT đã mua một gói tiếp thị qua email (20.000 email mỗi tháng) để gửi thông tin marketing, email khôi phục mật khẩu, v.v. Bob nhận ra rằng mình đã phát triển xong API đăng nhập, nhưng cần phải có thêm tùy chọn "Quên mật khẩu" để người dùng khôi phục tài khoản.
+
+2. Thực hiện: Anh ấy bắt đầu xây dựng endpoint  /apirule4/sendOTP_v để gửi mã số gồm 4 chữ số tới địa chỉ email của người dùng. Người dùng sau đó sẽ sử dụng Mã xác thực một lần (OTP) đó để khôi phục tài khoản.
+
+**Vấn đề ở đây là gì?**
+
+Bob đã không bật bất kỳ giới hạn tần suất (rate limiting) nào cho endpoint này. Một kẻ xấu có thể viết một đoạn mã nhỏ và tấn công vét cạn (brute force) endpoint này, gửi hàng loạt email chỉ trong vài giây. Điều này sẽ tiêu tốn hết gói email mà công ty vừa mua, gây ra thiệt hại trực tiếp về tài chính.
+
+**Giải pháp:**
+Cuối cùng, Bob đã đưa ra một giải pháp thông minh hơn với endpoint /apirule4/sendOTP_s. Anh ấy đã kích hoạt tính năng giới hạn tần suất, yêu cầu người dùng phải đợi 2 phút mới có thể yêu cầu gửi lại mã OTP một lần nữa.
+
+**Các biện pháp giảm thiểu (Mitigation Measures)**
+
+- Sử dụng Captcha: Đảm bảo sử dụng captcha để tránh các yêu cầu từ các kịch bản tự động (scripts) và bot.
+
+- Thiết lập hạn mức (Rate Limit): Đảm bảo triển khai giới hạn về tần suất một khách hàng có thể gọi API trong một khoảng thời gian nhất định và thông báo ngay lập tức khi vượt quá hạn mức.
+
+- Giới hạn kích thước dữ liệu: Đảm bảo xác định kích thước dữ liệu tối đa cho tất cả các tham số và nội dung (payload), ví dụ: độ dài chuỗi tối đa và số lượng phần tử tối đa trong một mảng.
+
+
+**Lỗi này xảy ra như thế nào?**
+
+Lỗi phân quyền cấp chức năng (BFLA) phản ánh kịch bản trong đó một người dùng có đặc quyền thấp (ví dụ: nhân viên bán hàng) vượt qua các bước kiểm tra của hệ thống để truy cập vào dữ liệu bảo mật bằng cách mạo danh người dùng có đặc quyền cao (Quản trị viên - Admin).
+
+Hãy cân nhắc một kịch bản với các chính sách kiểm soát truy cập phức tạp bao gồm nhiều phân cấp, vai trò và nhóm khác nhau. Nếu sự phân chia giữa các chức năng thông thường và chức năng quản trị không rõ ràng, nó sẽ dẫn đến những sai sót nghiêm trọng về ủy quyền. Tận dụng những vấn đề này, kẻ xâm nhập có thể dễ dàng truy cập vào các tài nguyên trái phép của người dùng khác hoặc nguy hiểm nhất là các chức năng quản trị.
+
+BFLA cũng tương tự như lỗi quyền hạn IDOR, nơi người dùng (thường là kẻ xâm nhập) có thể thực hiện các tác vụ ở cấp độ quản trị. Các API có hệ thống vai trò người dùng phức tạp và quyền hạn trải dài trên nhiều cấp bậc thường dễ bị tấn công theo cách này hơn.
+
+**Tác động tiềm tàng**
+
+Cuộc tấn công này chủ yếu nhắm vào các nguyên tắc Ủy quyền (Authorization) và Chống thoái thác (Non-repudiation) trong bảo mật. Lỗi phân quyền cấp chức năng có thể dẫn đến việc kẻ xâm nhập mạo danh một người dùng hợp lệ và chiếm quyền quản trị để thực hiện các tác vụ nhạy cảm.
+
+**Ví dụ thực tế (Practical Example)**
+Tiếp tục sử dụng trình duyệt Chrome và Talend API Tester trên máy ảo (VM).
+
+1. Kịch bản: Bob được giao nhiệm vụ phát triển một bảng điều khiển (dashboard) dành cho ban giám đốc công ty để họ có thể xem toàn bộ dữ liệu nhân viên và thực hiện các tác vụ cụ thể.
+
+2. Cách triển khai của Bob: Bob xây dựng endpoint /apirule5/users_v để lấy dữ liệu của tất cả nhân viên. Để tăng cường bảo mật, anh ấy thêm một lớp bảo vệ bằng cách yêu cầu một tiêu đề (header) đặc biệt là isAdmin trong mỗi yêu cầu. API sẽ chỉ lấy thông tin nếu isAdmin=1 và mã Authorization-Token là chính xác.
+
+3. Lỗ hổng: Mã token của Alice (một nhân viên nhân sự - không phải Admin) là YWxpY2U6dGVzdCFAISM6Nzg5Nzg=. Mặc dù Alice không phải là quản trị viên, nhưng cô ấy vẫn có thể xem toàn bộ dữ liệu nhân viên bằng cách tùy chỉnh yêu cầu gửi tới endpoint với giá trị isAdmin = 1.
+
+**Vấn đề ở đây là gì?**
+
+Hệ thống tin tưởng vào thông tin do phía máy khách (client) gửi lên (tiêu đề isAdmin) mà không kiểm tra lại vai trò thực sự của người dùng đó trong cơ sở dữ liệu.
+
+**Giải pháp:**
+Vấn đề này có thể được giải quyết bằng cách lập trình các quy tắc ủy quyền chính xác, kiểm tra vai trò chức năng của từng người dùng trong cơ sở dữ liệu ngay trong quá trình truy vấn. Bob đã triển khai một endpoint khác là /apirule5/users_s để xác thực vai trò của từng người dùng và chỉ hiển thị dữ liệu nếu vai trò thực sự là Admin.
+
+**Các biện pháp giảm thiểu (Mitigation Measures)**
+
+- Thiết kế và Kiểm thử: Đảm bảo thiết kế và kiểm thử kỹ lưỡng tất cả các hệ thống ủy quyền; áp dụng nguyên tắc Từ chối tất cả truy cập theo mặc định (Deny all access by default).
+
+- Phân nhóm quyền hạn: Đảm bảo các hoạt động chỉ được phép thực hiện bởi những người dùng thuộc nhóm được ủy quyền tương ứng.
+
+- Rà soát logic nghiệp vụ: Đảm bảo rà soát các endpoint API để tìm các lỗ hổng liên quan đến phân quyền cấp chức năng, đồng thời luôn ghi nhớ logic nghiệp vụ của ứng dụng và phân cấp nhóm người dùng.
