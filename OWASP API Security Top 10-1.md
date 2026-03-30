@@ -161,3 +161,38 @@ Chúng ta sẽ cập nhật logic truy vấn đăng nhập để sử dụng c�
 - Đa lớp bảo vệ: Triển khai xác thực đa yếu tố (MFA) nếu có thể, thiết lập tính năng khóa tài khoản hoặc hệ thống captcha để ngăn chặn tấn công vét cạn (brute force).
 
 - Mã hóa mật khẩu: Đảm bảo mật khẩu không được lưu dưới dạng văn bản thuần túy (plain text) trong cơ sở dữ liệu để tránh việc kẻ tấn công chiếm đoạt tài khoản sau khi đột nhập vào DB.
+
+
+**Lỗi phơi nhiễm dữ liệu quá mức xảy ra như thế nào?**
+
+Phơi nhiễm dữ liệu quá mức xảy ra khi các ứng dụng có xu hướng tiết lộ nhiều thông tin hơn mức cần thiết cho người dùng thông qua các phản hồi API.
+
+Các nhà phát triển ứng dụng thường để lộ tất cả các thuộc tính của đối tượng (dựa trên cách triển khai chung/mặc định) mà không cân nhắc đến mức độ nhạy cảm của chúng. Họ phó mặc nhiệm vụ lọc dữ liệu cho lập trình viên Front-end thực hiện trước khi hiển thị cho người dùng. Kết quả là, một kẻ tấn công có thể chặn bắt (intercept) phản hồi từ API và dễ dàng trích xuất các dữ liệu bảo mật mong muốn.
+
+Các công cụ phát hiện lỗi lúc thực thi (runtime detection tools) hoặc các công cụ quét bảo mật thông thường có thể đưa ra cảnh báo về lỗ hổng này. Tuy nhiên, chúng không thể phân biệt được đâu là dữ liệu hợp lệ cần được trả về và đâu là dữ liệu nhạy cảm cần được giữ kín.
+
+**Tác động tiềm tàng**
+
+Một kẻ xấu có thể thực hiện hành vi "đánh hơi" (sniffing) lưu lượng truy cập và dễ dàng tiếp cận dữ liệu bí mật, bao gồm các chi tiết cá nhân như: số tài khoản, số điện thoại, mã thông báo truy cập (access tokens) và nhiều thông tin khác. Thông thường, các API trả về các token nhạy cảm mà sau đó có thể được sử dụng để gọi tới các điểm cuối (endpoints) quan trọng khác.
+
+**Ví dụ thực tế (Practical Example)**
+
+Tiếp tục sử dụng trình duyệt Chrome và Talend API Tester trên máy ảo (VM) để thực hành.
+
+1. Kịch bản: Công ty MHT ra mắt một cổng thông tin dựa trên bình luận. Hệ thống nhận bình luận của người dùng và lưu trữ vào cơ sở dữ liệu cùng các thông tin khác như vị trí, thông tin thiết bị, v.v., để cải thiện trải nghiệm người dùng.
+
+2. Sai lầm của Bob: Bob được giao nhiệm vụ phát triển một endpoint để hiển thị bình luận trên trang web chính. Anh ấy đã tạo ra endpoint apirule3/comment_v/{id} để lấy tất cả thông tin có sẵn của một bình luận từ cơ sở dữ liệu. Bob mặc định rằng lập trình viên front-end sẽ tự lọc bỏ những thông tin thừa khi hiển thị.
+
+3. Vấn đề: API đang gửi đi nhiều dữ liệu hơn mức mong muốn. Thay vì dựa dẫm vào kỹ sư front-end, chỉ những dữ liệu thực sự liên quan mới được phép gửi đi từ cơ sở dữ liệu.
+
+**Giải pháp:**
+Sau khi nhận ra sai lầm, Bob đã cập nhật và tạo ra một endpoint an toàn là /apirule3/comment_s/{id}. Endpoint này chỉ trả về những thông tin cần thiết nhất cho lập trình viên (như nội dung bình luận và tên người dùng).
+
+**Các biện pháp giảm thiểu (Mitigation Measures)**
+- Tuyệt đối không phó mặc việc lọc dữ liệu nhạy cảm cho lập trình viên front-end. Việc lọc phải được thực hiện ở phía máy chủ (Backend).
+
+- Rà soát định kỳ: Đảm bảo kiểm tra thường xuyên các phản hồi từ API để đảm bảo nó chỉ trả về dữ liệu hợp lệ và không gây ra bất kỳ vấn đề bảo mật nào.
+
+- Tránh sử dụng các phương thức chung chung: Hạn chế dùng các hàm như to_string() hoặc to_json() trên toàn bộ đối tượng dữ liệu vì chúng sẽ xuất bản tất cả các thuộc tính của đối tượng đó.
+
+- Kiểm thử API (API Endpoint Testing): Sử dụng nhiều trường hợp kiểm thử (test cases) khác nhau và xác minh thông qua cả kiểm thử tự động lẫn thủ công để xem liệu API có đang rò rỉ thêm dữ liệu thừa hay không.
