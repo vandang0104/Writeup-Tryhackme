@@ -105,3 +105,129 @@ Khi nói đến việc xâm nhập cơ chế xác thực, liệt kê thông tin 
 - Khai thác lỗi chi tiết: Những hiểu biết thu được từ các thông báo lỗi này có thể làm sáng tỏ các khía cạnh như chính sách mật khẩu và cơ chế khóa tài khoản, mở đường cho các chiến lược brute-force hiệu quả hơn.
 
 **Tóm lại**: Thông báo lỗi chi tiết giống như những mẩu bánh mì vụn dẫn dắt kẻ tấn công đi sâu hơn vào hệ thống, cung cấp cho chúng những hiểu biết cần thiết để điều chỉnh chiến lược và có khả năng xâm phạm bảo mật theo những cách mà không bị phát hiện cho đến khi quá muộn.
+
+
+**Các lỗ hổng trong quy trình đặt lại mật khẩu**
+
+Cơ chế đặt lại mật khẩu là một phần quan trọng để đảm bảo sự thuận tiện cho người dùng trong các ứng dụng web hiện đại. Tuy nhiên, việc triển khai chúng đòi hỏi những cân nhắc bảo mật kỹ lưỡng vì các quy trình đặt lại mật khẩu được bảo mật kém có thể dễ dàng bị khai thác.
+
+**Các phương thức đặt lại mật khẩu phổ biến**
+
+- Đặt lại dựa trên Email (Email-Based Reset):
+Khi người dùng yêu cầu đặt lại mật khẩu, ứng dụng sẽ gửi một email chứa liên kết (link) đặt lại hoặc một mã thông báo (token) đến địa chỉ email đã đăng ký. Người dùng nhấp vào liên kết này để dẫn đến trang nhập mật khẩu mới, hoặc hệ thống sẽ tự động tạo mật khẩu mới. Phương pháp này phụ thuộc hoàn toàn vào tính bảo mật của tài khoản email người dùng và tính bí mật của token được gửi đi.
+
+- Đặt lại dựa trên Câu hỏi Bảo mật (Security Question-Based Reset):
+Phương pháp này yêu cầu người dùng trả lời các câu hỏi bảo mật đã thiết lập trước đó. Nếu trả lời đúng, hệ thống cho phép tiến hành đặt lại mật khẩu. Mặc dù nó thêm một lớp bảo mật dựa trên thông tin cá nhân, nhưng nó có rủi ro lớn nếu kẻ tấn công thu thập được Thông tin định danh cá nhân (PII) của bạn qua mạng xã hội hoặc các nguồn công khai khác.
+
+- Đặt lại dựa trên SMS (SMS-Based Reset):
+Hoạt động tương tự email nhưng mã xác thực được gửi trực tiếp đến điện thoại di động. Phương pháp này giả định rằng quyền truy cập điện thoại là an toàn, nhưng thực tế nó vẫn có thể bị tổn thương bởi các cuộc tấn công SIM swapping (hoán đổi SIM) hoặc đánh chặn tin nhắn.
+
+**Các lỗ hổng thường gặp**
+
+Mỗi phương pháp trên đều có những điểm yếu tiềm ẩn mà bạn cần lưu ý:
+
+1. Token có thể đoán trước (Predictable Tokens):
+Nếu các token đặt lại trong liên kết hoặc SMS tuân theo một quy luật tuần tự hoặc quá đơn giản, kẻ tấn công có thể dùng phương pháp tấn công vét cạn (brute-force) để tạo ra các URL đặt lại mật khẩu hợp lệ của người dùng khác.
+
+2. Vấn đề về thời gian hết hạn của Token (Token Expiration Issues):
+Token có hiệu lực quá lâu hoặc không mất đi ngay sau khi sử dụng sẽ tạo ra một "cửa sổ cơ hội" cho kẻ tấn công. Một quy trình an toàn đòi hỏi token phải hết hạn nhanh chóng và chỉ sử dụng được duy nhất một lần.
+
+3. Xác thực không đầy đủ (Insufficient Validation):
+Các cơ chế xác minh như câu hỏi bảo mật quá phổ biến (ví dụ: "Món ăn yêu thích của bạn là gì?") rất dễ bị đoán. Ngoài ra, nếu việc xác thực chỉ dựa vào email mà tài khoản email đó đã bị xâm nhập, thì toàn bộ hệ thống coi như sụp đổ.
+
+4. Tiết lộ thông tin (Information Disclosure):
+Các thông báo lỗi chi tiết như "Email này chưa được đăng ký" hoặc "Chúng tôi đã gửi link đặt lại đến [tên người dùng]" giúp kẻ tấn công xác nhận được tài khoản nào thực sự tồn tại trong hệ thống (User Enumeration).
+
+5. Truyền tải không an toàn (Insecure Transport):
+Nếu liên kết hoặc token được gửi qua kết nối không mã hóa (không phải HTTPS), chúng có thể bị kẻ xấu "nghe lén" trên đường truyền mạng.
+
+**Xác thực Cơ bản (Basic Authentication) vào năm 2024?**
+
+Xác thực cơ bản cung cấp một phương pháp đơn giản hơn để bảo mật quyền truy cập vào các thiết bị. Nó chỉ yêu cầu tên người dùng và mật khẩu, giúp việc triển khai và quản lý trở nên dễ dàng trên các thiết bị có khả năng xử lý hạn chế. Các thiết bị mạng như router thường sử dụng xác thực cơ bản để kiểm soát quyền truy cập vào giao diện quản trị của chúng. Trong kịch bản này, mục tiêu chính là ngăn chặn truy cập trái phép với cấu hình tối thiểu.
+
+Mặc dù xác thực cơ bản không cung cấp các tính năng bảo mật mạnh mẽ như các giao thức phức tạp hơn (chẳng hạn như OAuth hoặc xác thực dựa trên token), tính đơn giản của nó khiến nó phù hợp với các môi trường không yêu cầu quản lý phiên (session) và theo dõi người dùng, hoặc các môi trường mà những việc này được quản lý theo cách khác.
+
+Ví dụ: Đối với các thiết bị như router — nơi chủ yếu được truy cập để thay đổi cấu hình thay vì sử dụng thường xuyên — thì chi phí vận hành (overhead) để duy trì các trạng thái phiên là không cần thiết và có thể làm phức tạp hóa hiệu suất thiết bị.
+
+**Đặc điểm kỹ thuật và Cơ chế hoạt động**
+
+Xác thực cơ bản HTTP được định nghĩa trong RFC 7617, quy định rằng các thông tin xác thực (tên người dùng và mật khẩu) phải được vận chuyển dưới dạng một chuỗi mã hóa Base64 bên trong tiêu đề (header) Authorization của HTTP.
+
+- Tính đơn giản nhưng rủi ro: Phương pháp này rất thẳng thắn nhưng không an toàn nếu truyền qua các kết nối không phải HTTPS. Lý do là vì Base64 không phải là một phương pháp mã hóa (encryption) mà chỉ là một cách biến đổi định dạng dữ liệu, nên nó có thể bị giải mã cực kỳ dễ dàng.
+
+- Mối đe dọa thực sự: Nguy cơ lớn nhất thường đến từ việc người dùng sử dụng các thông tin xác thực yếu, vốn có thể bị tấn công vét cạn (brute-forced).
+
+**Cấu trúc tiêu đề Authorization**
+
+HTTP Basic Authentication cung cấp một cơ chế "thách thức - phản hồi" (challenge-response) đơn giản để yêu cầu thông tin xác thực từ người dùng. Định dạng của tiêu đề Authorization như sau:
+
+Authorization: Basic <credentials>
+
+Trong đó, <credentials> là chuỗi mã hóa Base64 của cụm: username:password
+
+
+**Wayback URLs**
+
+Hãy coi Wayback Machine của Internet Archive (archive.org) như một cỗ máy thời gian. Nó cho phép bạn du hành ngược thời gian để khám phá các phiên bản cũ của trang web, từ đó phát hiện các tệp tin và thư mục không còn hiển thị ở hiện tại nhưng có thể vẫn còn sót lại trên máy chủ. Những "di tích" này đôi khi có thể cung cấp một cửa sau (backdoor) dẫn thẳng vào hệ thống hiện tại.
+
+Ví dụ, sử dụng TryHackMe làm mục tiêu, chúng ta có thể xem lại tất cả các phiên bản cũ của trang web này từ năm 2018 đến nay.
+
+Để trích xuất tất cả các liên kết được lưu trong Wayback Machine, chúng ta có thể sử dụng công cụ có tên là waybackurls. Công cụ này được lưu trữ trên GitHub, bạn có thể dễ dàng cài đặt trên máy của mình bằng các lệnh sau:
+
+Lưu ý: Việc cài đặt công cụ này nằm ngoài phạm vi của bài học. Bạn nên cài đặt nó trên máy ảo (VM) cá nhân của mình.
+
+**Cài đặt waybackurls**
+
+Bash
+user@tryhackme $ git clone https://github.com/tomnomnom/waybackurls
+user@tryhackme $ cd waybackurls
+user@tryhackme $ sudo apt install golang-go -y # Lệnh này là tùy chọn
+user@tryhackme $ go build
+user@tryhackme $ ls -la
+total 6.6M
+drwxr-xr-x 4 user user 4.0K Jul  1 18:20 .
+drwxr-xr-x 9 user user 4.0K Jul  1 18:20 ..
+drwxr-xr-x 8 user user 4.0K Jul  1 18:20 .git
+-rw-r--r-- 1 user user   36 Jul  1 18:20 .gitignore
+-rw-r--r-- 1 user user  454 Jul  1 18:20 README.mkd
+-rw-r--r-- 1 user user   49 Jul  1 18:20 go.mod
+-rw-r--r-- 1 user user 5.4K Jul  1 18:20 main.go
+drwxr-xr-x 2 user user 4.0K Jul  1 18:20 script
+-rwxr-xr-x 1 user user 6.5M Jul  1 18:20 waybackurls
+
+# Chạy công cụ với mục tiêu là tryhackme.com
+user@tryhackme $ ./waybackurls tryhackme.com
+[-- cắt bớt --]
+https://tryhackme.com/.well-known/ai-plugin.json
+https://tryhackme.com/.well-known/assetlinks.json
+https://tryhackme.com/.well-known/dnt-policy.txt
+https://tryhackme.com/.well-known/gpc.json
+https://tryhackme.com/.well-known/nodeinfo
+https://tryhackme.com/.well-known/openid-configuration
+https://tryhackme.com/.well-known/security.txt
+https://tryhackme.com/.well-known/trust.txt
+[-- cắt bớt --]
+
+**Google Dorks**
+
+Đây là lúc kỹ năng sử dụng công cụ tìm kiếm của bạn tỏa sáng. Bằng cách soạn thảo các truy vấn tìm kiếm cụ thể, được gọi là Google Dorks, bạn có thể tìm thấy thông tin không được định sẵn để công khai. Những truy vấn này có thể lôi ra mọi thứ, từ các thư mục quản trị bị lộ đến các tệp nhật ký (logs) chứa mật khẩu và chỉ mục của các thư mục nhạy cảm.
+
+**Một số ví dụ điển hình:**
+
+- Tìm các bảng quản trị: site:example.com inurl:admin
+
+- Khai quật tệp nhật ký có chứa mật khẩu: filetype:log "password" site:example.com
+
+- Khám phá các thư mục sao lưu (backup): intitle:"index of" "backup" site:example.com
+
+**Kết luận**
+
+Xuyên suốt bài học này, chúng ta đã cùng nhau khám phá các khía cạnh khác nhau của kỹ thuật liệt kê thông tin (enumeration) và tấn công vét cạn (brute force) trên ứng dụng web. Những nội dung này đã trang bị cho bạn kiến thức và kỹ năng thực hành cần thiết để thực hiện các bài đánh giá bảo mật một cách kỹ lưỡng và chuyên nghiệp.
+
+**Những điểm chính cần ghi nhớ**
+
+- Liệt kê thông tin hiệu quả: Việc liệt kê thông tin đúng cách là yếu tố then chốt để xác định các lỗ hổng tiềm ẩn trong ứng dụng web. Sử dụng đúng công cụ và kỹ thuật có thể hé lộ những thông tin giá trị, giúp ích cho việc lập kế hoạch cho các bước tấn công tiếp theo.
+
+- Tối ưu hóa tấn công Brute Force: Để các cuộc tấn công vét cạn đạt hiệu quả cao, bạn cần biết cách tạo ra các danh sách từ (wordlists) thông minh, quản lý tốt các tham số tấn công và khéo léo né tránh các cơ chế phát hiện như giới hạn tốc độ (rate limiting) hay khóa tài khoản.
+
+- Trách nhiệm đạo đức: Đây là điều quan trọng nhất. Luôn thực hiện việc liệt kê và tấn công vét cạn khi và chỉ khi có sự cho phép rõ ràng từ chủ sở hữu hệ thống. Các cuộc tấn công trái phép là hành vi vi phạm pháp luật và có thể dẫn đến những hậu quả pháp lý cực kỳ nghiêm trọng.
